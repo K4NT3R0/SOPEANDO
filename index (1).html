@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Sopeando</title>
+<!--
+  Para Google Play: empaquetar con Capacitor (npm i @capacitor/core @capacitor/android @capacitor-community/admob).
+  Los anuncios solo funcionan en la app nativa; en el navegador se simulan.
+  Antes de publicar: poner tus IDs reales en AD.ids y AD.test=false, y tu App ID en AndroidManifest.
+-->
+<style>
+:root{--bg:#eaf0f6;--ink:#14213d;--card:#fff;--line:#c9d4e3;--accent:#1b4fd8;--on:#fff;--mute:#5b6b86;
+--m0:#ffe14d;--m1:#ff9fb8;--m2:#7be0c3;--m3:#b8a1ff;--m4:#ffb36b;--m5:#8cc8ff}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1626;--ink:#eaf0ff;--card:#1a2540;--line:#2c3a5e;--accent:#6f93ff;--on:#0f1626;--mute:#97a6c7}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+padding:env(safe-area-inset-top,0) env(safe-area-inset-right,0) env(safe-area-inset-bottom,0) env(safe-area-inset-left,0);
+-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+main{max-width:520px;margin:0 auto;padding:18px 16px 28px}
+h1{font:800 clamp(34px,10vw,46px)/1 Georgia,"Times New Roman",serif;margin:8px 0 6px;letter-spacing:-.02em}
+h1 span{background:linear-gradient(transparent 58%,var(--m0) 58% 92%,transparent 92%);padding:0 .08em}
+p.sub{margin:0 0 18px;color:var(--mute)}
+.stats{display:flex;gap:10px;margin-bottom:16px}
+.stat{flex:1;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.stat b{display:block;font-size:22px}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+.btn{width:100%;background:var(--accent);color:var(--on);font-weight:700;padding:16px;border-radius:16px;font-size:18px}
+.btn.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn[disabled]{opacity:.55}
+h2{font-size:17px;margin:22px 0 10px}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px;margin-bottom:12px}
+.seg button{flex:1;padding:9px;border-radius:9px;background:none;font-weight:600;color:var(--mute)}
+.seg button.on{background:var(--accent);color:var(--on)}
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.theme{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 12px;text-align:left;font-weight:600}
+.theme i{font-style:normal;font-size:24px;display:block;margin-bottom:4px}
+.hide{display:none!important}
+.bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px}
+.bar button{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-weight:600}
+.bar strong{font:700 18px Georgia,serif}
+#timer{font-variant-numeric:tabular-nums;color:var(--mute);min-width:52px;text-align:right}
+#grid{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px;touch-action:none}
+.cell{aspect-ratio:1;display:grid;place-items:center;font:800 clamp(15px,5.4vw,26px)/1 ui-rounded,"SF Pro Rounded",system-ui,sans-serif;border-radius:8px;position:relative}
+.cell.sel{background:var(--accent);color:var(--on)}
+.cell.found{background:var(--c);color:#14213d}
+.cell.hint{animation:pulse .6s ease-in-out 4;box-shadow:0 0 0 3px var(--accent)}
+@keyframes pulse{50%{transform:scale(1.18)}}
+@media (prefers-reduced-motion:reduce){.cell.hint{animation:none}}
+#words{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+#words span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-weight:600;font-size:14px}
+#words span.ok{background:var(--c);color:#14213d;text-decoration:line-through;border-color:transparent}
+.modal{position:fixed;inset:0;background:rgba(10,15,30,.6);display:grid;place-items:center;padding:20px;z-index:9}
+.sheet{background:var(--card);border-radius:20px;padding:24px;width:min(360px,100%);text-align:center}
+.sheet h3{font:800 26px Georgia,serif;margin:0 0 6px}
+.sheet p{margin:0 0 16px;color:var(--mute)}
+.sheet .btn{margin-top:8px}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:10}
+</style>
+</head>
+<body>
+<main>
+ <section id="home">
+  <h1><span>Sopeando</span></h1>
+  <p class="sub">Sopa de letras: encuentra las palabras ocultas. Un reto nuevo cada día.</p>
+  <div class="stats">
+   <div class="stat"><b id="stStreak">0</b>días de racha</div>
+   <div class="stat"><b id="stDone">0</b>sopas resueltas</div>
+  </div>
+  <button class="btn" id="daily"></button>
+  <h2>Jugar por temas</h2>
+  <div class="seg" id="level"><button data-l="easy" class="on">Fácil</button><button data-l="hard">Clásica</button></div>
+  <div class="themes" id="themes"></div>
+ </section>
+ <section id="game" class="hide">
+  <div class="bar"><button id="back">Salir</button><strong id="gTitle"></strong><span id="timer">0:00</span></div>
+  <div id="grid"></div>
+  <div id="words"></div>
+  <button class="btn alt" id="hint">Pista: ver un anuncio</button>
+ </section>
+</main>
+<div id="modal" class="modal hide"><div class="sheet" id="sheet"></div></div>
+<div id="toast" class="hide"></div>
+<script>
+"use strict";
+/* ---------- Palabras (MAYÚSCULAS, sin tildes) ---------- */
+const THEMES=[
+{id:"animales",name:"Animales",icon:"🐘",w:"PERRO GATO CABALLO VACA OVEJA CONEJO TORTUGA DELFIN LEON JIRAFA ELEFANTE PINGUINO BURRO CERDO ZORRO AGUILA".split(" ")},
+{id:"comida",name:"Comida",icon:"🥘",w:"PAELLA TORTILLA JAMON QUESO GAZPACHO CROQUETA LENTEJAS CHURROS TURRON PATATAS ARROZ SOPA ENSALADA MIGAS".split(" ")},
+{id:"paises",name:"Países",icon:"🌍",w:"ESPAÑA FRANCIA ITALIA MEXICO PERU CHILE CUBA BRASIL ARGENTINA COLOMBIA PORTUGAL ALEMANIA JAPON EGIPTO".split(" ")},
+{id:"deportes",name:"Deportes",icon:"⚽",w:"FUTBOL TENIS NATACION CICLISMO BALONCESTO GOLF BOXEO ATLETISMO VOLEIBOL RUGBY PADEL HOCKEY KARATE ESGRIMA".split(" ")},
+{id:"oficios",name:"Oficios",icon:"🛠️",w:"MEDICO ENFERMERA ABOGADO COCINERO PROFESOR ALBAÑIL BOMBERO POLICIA PINTOR PILOTO CARTERO PANADERO MECANICO JUEZ".split(" ")},
+{id:"hogar",name:"Hogar",icon:"🛋️",w:"SOFA MESA SILLA CAMA ARMARIO COCINA SALON BAÑO TERRAZA VENTANA PUERTA LAMPARA ESPEJO ALFOMBRA".split(" ")},
+{id:"naturaleza",name:"Naturaleza",icon:"🏔️",w:"MONTAÑA RIO MAR BOSQUE DESIERTO VOLCAN ISLA LAGO CASCADA VALLE PLAYA SELVA COLINA GLACIAR".split(" ")}
+];
+const N=10, ABC="AAAAEEEEOOOIISSRRNNDDLLCCTTUUMMPPBGVYQHFZJÑX";
+const EASY=[[0,1],[1,0],[1,1]], HARD=[[0,1],[1,0],[1,1],[0,-1],[-1,0],[-1,-1],[1,-1],[-1,1]];
+const COLORS=["--m0","--m1","--m2","--m3","--m4","--m5"];
+
+/* ---------- Anuncios (AdMob vía Capacitor; simulados en navegador) ---------- */
+const AD={
+ test:true, ready:false, // test:true en pruebas y pruebas cerradas; ponlo en false SOLO en la versión de producción
+ ids:{int:"ca-app-pub-6672720525194990/4443888794",rew:"ca-app-pub-6672720525194990/3238618337",ban:"ca-app-pub-6672720525194990/1298850703"},
+ p(){return window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.AdMob},
+ async init(){
+  const A=this.p(); if(!A) return;
+  try{
+   const i=await A.requestConsentInfo(); // consentimiento RGPD (obligatorio en España/UE)
+   if(i.isConsentFormAvailable&&i.status==="REQUIRED") await A.showConsentForm();
+   await A.initialize({initializeForTesting:this.test}); this.ready=true;
+   try{await A.showBanner({adId:this.ids.ban,adSize:"ADAPTIVE_BANNER",position:"BOTTOM_CENTER",margin:0,isTesting:this.test});document.querySelector("main").style.paddingBottom="90px"}catch(e){}
+  }catch(e){}
+ },
+ async interstitial(){
+  if(S.noAds) return;
+  const A=this.p();
+  if(!A){return sim("Anuncio de prueba",2)}
+  if(!this.ready) return;
+  try{await A.prepareInterstitial({adId:this.ids.int,isTesting:this.test});await A.showInterstitial()}catch(e){}
+ },
+ async rewarded(){
+  const A=this.p();
+  if(!A) return sim("Anuncio de prueba: tu pista llega en unos segundos",3);
+  if(!this.ready) return false;
+  try{
+   let ok=false;
+   const h=await A.addListener("onRewardedVideoAdReward",()=>{ok=true});
+   await A.prepareRewardVideoAd({adId:this.ids.rew,isTesting:this.test});
+   const r=await A.showRewardVideoAd();
+   if(h&&h.remove) h.remove();
+   return ok||!!r;
+  }catch(e){return false}
+ }
+};
+function sim(msg,s){
+ return new Promise(res=>{
+  const m=$("modal"),sh=$("sheet"); sh.innerHTML="<h3>"+msg+"</h3><p id='cd'>"+s+"</p>"; show(m);
+  const t=setInterval(()=>{s--; $("cd").textContent=s; if(s<=0){clearInterval(t);hide(m);res(true)}},1000);
+ });
+}
+
+/* ---------- Estado guardado ---------- */
+let S={streak:0,last:"",done:0,dailyDone:"",noAds:false};
+try{Object.assign(S,JSON.parse(localStorage.getItem("sl_state")||"{}"))}catch(e){}
+const save=()=>{try{localStorage.setItem("sl_state",JSON.stringify(S))}catch(e){}};
+
+/* ---------- Utilidades ---------- */
+const $=id=>document.getElementById(id), show=e=>e.classList.remove("hide"), hide=e=>e.classList.add("hide");
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a,r){for(let i=a.length-1;i>0;i--){const j=r()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function dayKey(d=new Date()){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function toast(t){const e=$("toast");e.textContent=t;show(e);clearTimeout(toast.t);toast.t=setTimeout(()=>hide(e),2600)}
+const fmt=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+
+/* ---------- Generador ---------- */
+function build(list,dirs,r,count){
+ const g=Array.from({length:N},()=>Array(N).fill("")), placed=[];
+ const pick=shuffle(list.slice(),r).slice(0,count).sort((a,b)=>b.length-a.length);
+ for(const w of pick){
+  for(let t=0;t<300;t++){
+   const [dr,dc]=dirs[r()*dirs.length|0], y=r()*N|0, x=r()*N|0;
+   const ey=y+dr*(w.length-1), ex=x+dc*(w.length-1);
+   if(ey<0||ey>=N||ex<0||ex>=N) continue;
+   let ok=true;
+   for(let i=0;i<w.length;i++){const c=g[y+dr*i][x+dc*i]; if(c&&c!==w[i]){ok=false;break}}
+   if(!ok) continue;
+   for(let i=0;i<w.length;i++) g[y+dr*i][x+dc*i]=w[i];
+   placed.push({w,y,x,dr,dc}); break;
+  }
+ }
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(!g[y][x]) g[y][x]=ABC[r()*ABC.length|0];
+ return{g,placed};
+}
+
+/* ---------- Partida ---------- */
+let G=null, cells=[], sel=null, timerId=0, secs=0, isDaily=false, curTheme=null, level="easy";
+function start(theme,daily){
+ isDaily=daily; curTheme=theme;
+ let r,dirs;
+ if(daily){r=rng([...dayKey()].reduce((a,c)=>a*31+c.charCodeAt(0)|0,7)); dirs=HARD}
+ else{r=Math.random; dirs=level==="easy"?EASY:HARD}
+ const b=build(theme.w,dirs,r,8);
+ G={g:b.g,words:b.placed.map(p=>({...p,found:false,col:null})),n:0};
+ const grid=$("grid"); grid.innerHTML=""; cells=[];
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){const c=document.createElement("div");c.className="cell";c.textContent=G.g[y][x];c.dataset.y=y;c.dataset.x=x;grid.appendChild(c);cells.push(c)}
+ $("gTitle").textContent=daily?"Reto diario":theme.name;
+ renderWords(); hide($("home")); show($("game"));
+ secs=0; $("timer").textContent="0:00"; clearInterval(timerId); timerId=setInterval(()=>{secs++;$("timer").textContent=fmt(secs)},1000);
+}
+function renderWords(){
+ const box=$("words"); box.innerHTML="";
+ G.words.slice().sort((a,b)=>a.w.localeCompare(b.w,"es")).forEach(o=>{
+  const s=document.createElement("span"); s.textContent=o.w; if(o.found){s.className="ok";s.style.setProperty("--c","var("+o.col+")")} box.appendChild(s);
+ });
+}
+const cellAt=(y,x)=>cells[y*N+x];
+function paint(){cells.forEach(c=>c.classList.remove("sel")); if(sel) sel.cells.forEach(c=>c.classList.add("sel"))}
+function pointCell(e){const el=document.elementFromPoint(e.clientX,e.clientY);return el&&el.classList&&el.classList.contains("cell")?el:null}
+const grid=$("grid");
+grid.addEventListener("pointerdown",e=>{const c=pointCell(e);if(!c||!G)return;grid.setPointerCapture(e.pointerId);sel={y:+c.dataset.y,x:+c.dataset.x,cells:[c]};paint()});
+grid.addEventListener("pointermove",e=>{
+ if(!sel)return; const c=pointCell(e); if(!c)return;
+ const dy=+c.dataset.y-sel.y, dx=+c.dataset.x-sel.x;
+ if(dy===0||dx===0||Math.abs(dy)===Math.abs(dx)){
+  const n=Math.max(Math.abs(dy),Math.abs(dx)); sel.cells=[];
+  for(let i=0;i<=n;i++) sel.cells.push(cellAt(sel.y+Math.sign(dy)*i,sel.x+Math.sign(dx)*i));
+  paint();
+ }
+});
+function endSel(){
+ if(!sel)return;
+ const word=sel.cells.map(c=>c.textContent).join(""), rev=[...word].reverse().join("");
+ const o=G.words.find(w=>!w.found&&(w.w===word||w.w===rev));
+ if(o){
+  o.found=true; o.col=COLORS[G.n++%COLORS.length];
+  sel.cells.forEach(c=>{c.classList.add("found");c.style.setProperty("--c","var("+o.col+")")});
+  renderWords(); if(G.words.every(w=>w.found)) win();
+ }
+ sel=null; paint();
+}
+grid.addEventListener("pointerup",endSel); grid.addEventListener("pointercancel",()=>{sel=null;paint()});
+
+/* ---------- Pista con anuncio recompensado ---------- */
+$("hint").onclick=async()=>{
+ const left=G.words.filter(w=>!w.found); if(!left.length)return;
+ const btn=$("hint"); btn.disabled=true;
+ const ok=await AD.rewarded(); btn.disabled=false;
+ if(!ok){toast("Ahora no hay anuncio disponible. Inténtalo en un momento.");return}
+ const o=left[Math.random()*left.length|0], c=cellAt(o.y,o.x);
+ c.classList.add("hint"); setTimeout(()=>c.classList.remove("hint"),2600);
+ toast("Empieza por la letra marcada: "+o.w);
+};
+
+/* ---------- Final ---------- */
+function win(){
+ clearInterval(timerId); S.done++;
+ let extra="";
+ if(isDaily&&S.dailyDone!==dayKey()){
+  const y=new Date(); y.setDate(y.getDate()-1);
+  S.streak=S.last===dayKey(y)?S.streak+1:1; S.last=dayKey(); S.dailyDone=dayKey();
+  extra=" Racha: "+S.streak+(S.streak===1?" día.":" días.");
+ }
+ save(); refresh();
+ const due=S.done%3===0;
+ $("sheet").innerHTML="<h3>¡Sopa resuelta!</h3><p>Tiempo: "+fmt(secs)+"."+extra+"</p>"+
+  (isDaily?"":"<button class='btn' id='next'>Otra sopa</button>")+"<button class='btn alt' id='menu'>Volver al inicio</button>";
+ show($("modal"));
+ const go=async f=>{hide($("modal")); if(due) await AD.interstitial(); f()};
+ if(!isDaily) $("next").onclick=()=>go(()=>start(curTheme,false));
+ $("menu").onclick=()=>go(home);
+}
+function home(){clearInterval(timerId);hide($("game"));show($("home"));refresh()}
+$("back").onclick=home;
+
+/* ---------- Inicio ---------- */
+function refresh(){
+ const y=new Date(); y.setDate(y.getDate()-1);
+ if(S.last&&S.last!==dayKey()&&S.last!==dayKey(y)) S.streak=0;
+ $("stStreak").textContent=S.streak; $("stDone").textContent=S.done;
+ const d=$("daily"), done=S.dailyDone===dayKey();
+ d.textContent=done?"Reto de hoy completado":"Reto diario"; d.disabled=done;
+}
+const day=Math.floor(Date.now()/864e5);
+$("daily").onclick=()=>start(THEMES[day%THEMES.length],true);
+THEMES.forEach(t=>{const b=document.createElement("button");b.className="theme";b.innerHTML="<i>"+t.icon+"</i>"+t.name;b.onclick=()=>start(t,false);$("themes").appendChild(b)});
+document.querySelectorAll("#level button").forEach(b=>b.onclick=()=>{level=b.dataset.l;document.querySelectorAll("#level button").forEach(x=>x.classList.toggle("on",x===b))});
+refresh(); AD.init();
+</script>
+</body>
+</html>
